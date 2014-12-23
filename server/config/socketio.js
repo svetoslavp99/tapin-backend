@@ -9,7 +9,7 @@ var config = require('./environment');
 // When the user disconnects.. perform this
 function onDisconnect(socket) {
   // update user online status
-  require('../api/user/user.controller').updateOnlineStatus(socket.decoded_token._id, false, undefined, function(err) {
+  require('../api/user/user.controller').updateOnlineStatus(socket.handshake.decoded_token._id, false, socket.id, function(err) {
     if(err) {
       console.log('[%s] - Error occured : [%s]', socket.id, err);
     }
@@ -24,15 +24,15 @@ function onConnect(socket) {
   });
 
   // update user online status
-  require('../api/user/user.controller').updateOnlineStatus(socket.decoded_token._id, true, socket.id, function(err) {
+  require('../api/user/user.controller').updateOnlineStatus(socket.handshake.decoded_token._id, true, socket.id, function(err, user) {
     if(err) {
       console.log('[%s] - Error occured : [%s]', socket.id, err);
       return socket.disconnect();
     }
 
     // Insert sockets below
-    require('../api/thing/thing.socket').register(socket);
-    require('../api/user/user.socket').register(socket);
+    require('../api/campaign/campaign.socket').register(socket);
+    require('../api/user/user.socket').register(socket, user);
 
   });
 }
@@ -48,17 +48,24 @@ module.exports = function (socketio) {
   // 1. You will need to send the token in `client/components/socket/socket.service.js`
   //
   // 2. Require authentication here:
-  socketio.use(require('socketio-jwt').authorize({
-     secret: config.secrets.session,
-     handshake: true
+  //socketio.use(require('socketio-jwt').authorize({
+  //   secret: config.secrets.session,
+  //   handshake: true
+  //}));
+
+  global.io = socketio;
+
+  socketio.set('authorization', require('socketio-jwt').authorize({
+    secret: config.secrets.session,
+    handshake: true
   }));
 
   socketio.on('connection', function (socket) {
     socket.address = socket.handshake.address !== null ?
-            socket.handshake.address + ':' + socket.handshake.address.port :
+            socket.handshake.address.address + ':' + socket.handshake.address.port :
             process.env.DOMAIN;
 
-    socket.address = socket.request.connection.remoteAddress || process.env.DOMAIN;
+    //socket.address = socket.request.connection.remoteAddress || process.env.DOMAIN;
 
     socket.connectedAt = new Date();
 
@@ -70,6 +77,6 @@ module.exports = function (socketio) {
 
     // Call onConnect.
     onConnect(socket);
-    console.info('[%s] CONNECTED : [%s]', socket.address, socket.decoded_token._id);
+    console.info('[%s] CONNECTED : [%s]', socket.address, socket.handshake.decoded_token._id);
   });
 };

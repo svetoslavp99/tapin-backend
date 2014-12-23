@@ -3,8 +3,11 @@
 angular.module('tapinApp')
   .controller('NavbarCtrl', function ($scope, $location, Auth) {
     $scope.menu = [{
-      'title': 'Home',
+      'title': 'Dashboard',
       'link': '/'
+    }, {
+      'title': 'Campaign',
+      'link': '/campaign'
     }];
 
     $scope.isCollapsed = true;

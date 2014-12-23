@@ -8,6 +8,21 @@
     <div class="col-sm-12">
       <form class="form" name="form" ng-submit="register(form)" novalidate>
 
+        <div class="form-group" ng-class="{ 'has-success': form.username.$valid && submitted,
+                                            'has-error': form.username.$invalid && submitted }">
+          <label>Username</label>
+
+          <input type="text" name="username" class="form-control" ng-model="user.username"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.username.$error.required && submitted">
+            A username is required
+          </p>
+          <p class="help-block" ng-show="form.username.$error.mongoose">
+            {{ errors.username }}
+          </p>
+        </div>
+
         <div class="form-group" ng-class="{ 'has-success': form.name.$valid && submitted,
                                             'has-error': form.name.$invalid && submitted }">
           <label>Name</label>
@@ -51,6 +66,28 @@
           </p>
           <p class="help-block" ng-show="form.password.$error.mongoose">
             {{ errors.password }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.lat.$valid && submitted,
+                                            'has-error': form.lat.$invalid && submitted }">
+          <label>Latitude</label>
+
+          <input type="text" name="lat" class="form-control" ng-model="user.lat"
+                 required/>
+          <p class="help-block" ng-show="form.lat.$error.required && submitted">
+            A latitude is required
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.long.$valid && submitted,
+                                            'has-error': form.long.$invalid && submitted }">
+          <label>Longitude</label>
+
+          <input type="text" name="long" class="form-control" ng-model="user.long"
+                 required/>
+          <p class="help-block" ng-show="form.long.$error.required && submitted">
+            A longitude is required
           </p>
         </div>
 

@@ -5,39 +5,40 @@
 
 'use strict';
 
-var Thing = require('../api/thing/thing.model');
 var User = require('../api/user/user.model');
+var UserLocation = require('../api/user/user-location.model');
+var Campaign = require('../api/campaign/campaign.model');
+var Opportunity = require('../api/user/opportunity.model');
+var async = require('async');
 
-Thing.find({}).remove(function () {
-  Thing.create({
-    name: 'Development Tools',
-    info: 'Integration with popular tools such as Bower, Grunt, Karma, Mocha, JSHint, Node Inspector, Livereload, Protractor, Jade, Stylus, Sass, CoffeeScript, and Less.'
-  }, {
-    name: 'Server and Client integration',
-    info: 'Built with a powerful and fun stack: MongoDB, Express, AngularJS, and Node.'
-  }, {
-    name: 'Smart Build System',
-    info: 'Build system ignores `spec` files, allowing you to keep tests alongside code. Automatic injection of scripts and styles into your index.html'
-  }, {
-    name: 'Modular Structure',
-    info: 'Best practice client and server structures allow for more code reusability and maximum scalability'
-  }, {
-    name: 'Optimized Build',
-    info: 'Build process packs up your templates as a single JavaScript payload, minifies your scripts/css/images, and rewrites asset names for caching.'
-  }, {
-    name: 'Deployment Ready',
-    info: 'Easily deploy your app to Heroku or Openshift with the heroku and openshift subgenerators'
-  });
-});
-
-User.find({}).remove(function () {
-  User.create({
-      provider: 'local',
-      username: 'test',
-      name: 'Test User',
-      email: 'test@test.com',
-      password: 'test'
-    }, {
+async.series([
+  // remove user schema
+  function (callback) {
+    User.find({}).remove(function () {
+      return callback();
+    });
+  },
+  // remove user location schema
+  function (callback) {
+    UserLocation.find({}).remove(function () {
+      return callback();
+    });
+  },
+  // remove opportunity schema
+  function (callback) {
+    Opportunity.find({}).remove(function () {
+      return callback();
+    });
+  },
+  // remove opportunity schema
+  function (callback) {
+    Campaign.find({}).remove(function () {
+      return callback();
+    });
+  },
+  // create users
+  function (callback) {
+    User.create({
       provider: 'local',
       role: 'admin',
       username: 'admin',
@@ -45,7 +46,72 @@ User.find({}).remove(function () {
       email: 'admin@admin.com',
       password: 'admin'
     }, function () {
-      console.log('finished populating users');
-    }
-  );
+      return callback();
+    })
+  },
+  function (callback) {
+    User.create({
+      provider: 'local',
+      role: 'manager',
+      username: 'business',
+      name: 'business',
+      email: 'business@admin.com',
+      password: 'business',
+      criteria: [{text: 'green juice'}, {text: 'beachlife'}, {text: 'health'}, {text: 'vegan'}]
+    }, function (err, user) {
+      if (err) {
+        return callback(err);
+      }
+      Opportunity.create({
+        user: user._id,
+        geo: [55, 55],
+        opportunity: [
+          {
+            distance: 0.25,
+            userGroup: []
+          },
+          {
+            distance: 0.5,
+            userGroup: []
+          },
+          {
+            distance: 1,
+            userGroup: []
+          }
+        ]
+      }, function (err) {
+        if (err) {
+          return callback(err);
+        }
+        return callback();
+      })
+    });
+  },
+  function (callback) {
+    User.create({
+      provider: 'local',
+      role: 'user',
+      username: 'test',
+      name: 'test',
+      email: 'test@admin.com',
+      password: 'test',
+      criteria: [{text: 'green juice'}, {text: 'beachlife'}, {text: 'health'}, {text: 'vegan'}]
+    }, function (err, user) {
+      UserLocation.create({
+        user: user._id,
+        geo: [55, 55]
+      }, function (err) {
+        if (err) {
+          return callback(err);
+        }
+        return callback();
+      })
+    })
+  }
+], function (err) {
+  if (err) {
+    console.log('error during population');
+  } else {
+    console.log('finished populating');
+  }
 });

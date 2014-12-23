@@ -10,9 +10,13 @@ angular.module('tapinApp')
 
       if(form.$valid) {
         Auth.createUser({
+          username: $scope.user.username,
           name: $scope.user.name,
           email: $scope.user.email,
-          password: $scope.user.password
+          password: $scope.user.password,
+          lat: $scope.user.lat,
+          long: $scope.user.long,
+          role: 'manager'
         })
         .then( function() {
           // Account created, redirect to home

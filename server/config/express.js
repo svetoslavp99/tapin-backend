@@ -18,16 +18,33 @@ var passport = require('passport');
 var session = require('express-session');
 var mongoStore = require('connect-mongo')(session);
 var mongoose = require('mongoose');
+var multer = require('multer');
+var expressValidator = require('express-validator');
 
-module.exports = function(app) {
+module.exports = function (app) {
   var env = app.get('env');
 
   app.set('views', config.root + '/server/views');
   app.engine('html', require('ejs').renderFile);
   app.set('view engine', 'html');
   app.use(compression());
-  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.urlencoded({
+    uploadDir: path.join(__dirname, '../uploads/'),
+    keepExtensions: true,
+    extended: false
+  }));
   app.use(bodyParser.json());
+  app.use(expressValidator({
+    customValidators: {
+      isArray: function (value) {
+        return Array.isArray(value);
+      },
+      gte: function (param, num) {
+        return param >= num;
+      }
+    }
+  }));
+  app.use(multer({dest: path.join(__dirname, "../uploads/")}));
   app.use(methodOverride());
   app.use(cookieParser());
   app.use(passport.initialize());
@@ -38,9 +55,9 @@ module.exports = function(app) {
     secret: config.secrets.session,
     resave: true,
     saveUninitialized: true,
-    store: new mongoStore({ mongoose_connection: mongoose.connection })
+    store: new mongoStore({mongoose_connection: mongoose.connection})
   }));
-  
+
   if ('production' === env) {
     app.use(favicon(path.join(config.root, 'public', 'favicon.ico')));
     app.use(express.static(path.join(config.root, 'public')));

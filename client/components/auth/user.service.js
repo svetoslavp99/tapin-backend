@@ -17,6 +17,30 @@ angular.module('tapinApp')
         params: {
           id:'me'
         }
+      },
+      getOpportunities: {
+        method: 'GET',
+        isArray: true,
+        params: {
+          id: 'me',
+          controller: 'opportunities'
+        }
+      },
+      getCriteria: {
+        method: 'GET',
+        isArray: true,
+        params: {
+          id: 'me',
+          controller: 'criteria'
+        }
+      },
+      getCampaign: {
+        method: 'GET',
+        isArray: true,
+        params: {
+          id: 'me',
+          controller: 'campaign'
+        }
       }
 	  });
   });

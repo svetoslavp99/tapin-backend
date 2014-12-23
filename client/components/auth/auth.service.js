@@ -25,10 +25,15 @@ angular.module('tapinApp')
           password: user.password
         }).
         success(function(data) {
-          $cookieStore.put('token', data.token);
-          currentUser = User.get();
-          deferred.resolve(data);
-          return cb();
+            if(data.role=='manager' || data.role == 'admin') {
+              $cookieStore.put('token', data.token);
+              currentUser = User.get();
+              deferred.resolve();
+              return cb();
+            } else {
+              deferred.reject({ message: 'Site access is restricted to only business users.' });
+              return cb({ message: 'Site access is restricted to only business users.' });
+            }
         }).
         error(function(err) {
           this.logout();

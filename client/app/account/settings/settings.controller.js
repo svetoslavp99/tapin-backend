@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('tapinApp')
-  .controller('SettingsCtrl', function ($scope, User, Auth) {
+  .controller('SettingsCtrl', function ($scope, User, Auth, socket) {
     $scope.errors = {};
 
     $scope.changePassword = function(form) {
