@@ -23,16 +23,78 @@
           </p>
         </div>
 
-        <div class="form-group" ng-class="{ 'has-success': form.name.$valid && submitted,
-                                            'has-error': form.name.$invalid && submitted }">
-          <label>Name</label>
+        <div class="form-group" ng-class="{ 'has-success': form.password.$valid && submitted,
+                                            'has-error': form.password.$invalid && submitted }">
+          <label>Password</label>
 
-          <input type="text" name="name" class="form-control" ng-model="user.name"
-                 required/>
-          <p class="help-block" ng-show="form.name.$error.required && submitted">
-            A name is required
+          <input type="password" name="password" class="form-control" ng-model="user.password"
+                 ng-minlength="3"
+                 required
+                 mongoose-error/>
+          <p class="help-block"
+             ng-show="(form.password.$error.minlength || form.password.$error.required) && submitted">
+            Password must be at least 3 characters.
+          </p>
+          <p class="help-block" ng-show="form.password.$error.mongoose">
+            {{ errors.password }}
           </p>
         </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.businessName.$valid && submitted,
+                                            'has-error': form.businessName.$invalid && submitted }">
+          <label>Business Name</label>
+
+          <input type="text" name="businessName" class="form-control" ng-model="user.businessName"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.businessName.$error.required && submitted">
+            A business name is required
+          </p>
+          <p class="help-block" ng-show="form.businessName.$error.mongoose">
+            {{ errors.businessName }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.website.$valid && submitted,
+                                            'has-error': form.website.$invalid && submitted }">
+          <label>Website</label>
+
+          <input type="text" name="website" class="form-control" ng-model="user.website"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.website.$error.required && submitted">
+            A website is required
+          </p>
+          <p class="help-block" ng-show="form.website.$error.mongoose">
+            {{ errors.website }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.contact.$valid && submitted,
+                                            'has-error': form.contact.$invalid && submitted }">
+          <label>Contact</label>
+
+          <input type="text" name="contact" class="form-control" ng-model="user.contact"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.webscontactite.$error.required && submitted">
+            A contact is required
+          </p>
+          <p class="help-block" ng-show="form.contact.$error.mongoose">
+            {{ errors.contact }}
+          </p>
+        </div>
+
+        <!--<div class="form-group" ng-class="{ 'has-success': form.name.$valid && submitted,-->
+                                            <!--'has-error': form.name.$invalid && submitted }">-->
+          <!--<label>Name</label>-->
+
+          <!--<input type="text" name="name" class="form-control" ng-model="user.name"-->
+                 <!--required/>-->
+          <!--<p class="help-block" ng-show="form.name.$error.required && submitted">-->
+            <!--A name is required-->
+          <!--</p>-->
+        <!--</div>-->
 
         <div class="form-group" ng-class="{ 'has-success': form.email.$valid && submitted,
                                             'has-error': form.email.$invalid && submitted }">
@@ -52,20 +114,33 @@
           </p>
         </div>
 
-        <div class="form-group" ng-class="{ 'has-success': form.password.$valid && submitted,
-                                            'has-error': form.password.$invalid && submitted }">
-          <label>Password</label>
+        <div class="form-group" ng-class="{ 'has-success': form.phone.$valid && submitted,
+                                            'has-error': form.phone.$invalid && submitted }">
+          <label>Phone</label>
 
-          <input type="password" name="password" class="form-control" ng-model="user.password"
-                 ng-minlength="3"
+          <input type="text" name="phone" class="form-control" ng-model="user.phone"
                  required
                  mongoose-error/>
-          <p class="help-block"
-             ng-show="(form.password.$error.minlength || form.password.$error.required) && submitted">
-            Password must be at least 3 characters.
+          <p class="help-block" ng-show="form.phone.$error.required && submitted">
+            A phone is required
           </p>
-          <p class="help-block" ng-show="form.password.$error.mongoose">
-            {{ errors.password }}
+          <p class="help-block" ng-show="form.phone.$error.mongoose">
+            {{ errors.phone }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.address.$valid && submitted,
+                                            'has-error': form.address.$invalid && submitted }">
+          <label>Address</label>
+
+          <input type="text" name="address" class="form-control" ng-model="user.address"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.address.$error.required && submitted">
+            A address is required
+          </p>
+          <p class="help-block" ng-show="form.address.$error.mongoose">
+            {{ errors.address }}
           </p>
         </div>
 
@@ -91,6 +166,35 @@
           </p>
         </div>
 
+        <div class="form-group" ng-class="{ 'has-success': form.businessType.$valid && submitted,
+                                            'has-error': form.businessType.$invalid && submitted }">
+          <label>Tell us about your business</label>
+
+          <select data-ng-model="user.businessType"
+                  data-ng-options="businessType for businessType in businessTypes"
+                  class="form-control"
+                  required>
+            <option value="" disabled>Select</option>
+          </select>
+          <p class="help-block" ng-show="form.businessType.$error.required && submitted">
+            A business type is required
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.businessCategory.$valid && submitted,
+                                            'has-error': form.businessCategory.$invalid && submitted }">
+          <label>Classify your business (select 3 max that apply)</label>
+
+          <div class="checkbox" ng-repeat="businessCategory in businessCategories">
+            <label>
+              <input type="checkbox" ng-model="checkbox[businessCategory]" ng-true-value="true" ng-false-value="false" ng-change="updateBusinessCategory(businessCategory, checkbox[businessCategory])"> {{businessCategory}}
+            </label>
+          </div>
+          <p class="help-block" ng-show="form.businessCategory.$error.required && submitted">
+            A business category is required
+          </p>
+        </div>
+
         <div>
           <button class="btn btn-inverse btn-lg btn-login" type="submit">
             Sign up
@@ -100,18 +204,18 @@
           </a>
         </div>
 
-        <hr>
-        <div>
-          <a class="btn btn-facebook" href="" ng-click="loginOauth('facebook')">
-            <i class="fa fa-facebook"></i> Connect with Facebook
-          </a>
-          <a class="btn btn-google-plus" href="" ng-click="loginOauth('google')">
-            <i class="fa fa-google-plus"></i> Connect with Google+
-          </a>
-          <a class="btn btn-twitter" href="" ng-click="loginOauth('twitter')">
-            <i class="fa fa-twitter"></i> Connect with Twitter
-          </a>
-        </div>
+        <!--<hr>-->
+        <!--<div>-->
+          <!--<a class="btn btn-facebook" href="" ng-click="loginOauth('facebook')">-->
+            <!--<i class="fa fa-facebook"></i> Connect with Facebook-->
+          <!--</a>-->
+          <!--<a class="btn btn-google-plus" href="" ng-click="loginOauth('google')">-->
+            <!--<i class="fa fa-google-plus"></i> Connect with Google+-->
+          <!--</a>-->
+          <!--<a class="btn btn-twitter" href="" ng-click="loginOauth('twitter')">-->
+            <!--<i class="fa fa-twitter"></i> Connect with Twitter-->
+          <!--</a>-->
+        <!--</div>-->
       </form>
     </div>
   </div>

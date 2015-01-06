@@ -11,6 +11,7 @@ angular.module('tapinApp')
     $scope.criteria = criteria;
     $scope.campaign = campaign[0] || null;
     $scope.error = '';
+    $scope.step = 1;
 
     var originalForm = angular.copy($scope.form);
 
@@ -21,7 +22,9 @@ angular.module('tapinApp')
         $scope.form.distance= $scope.form.opportunity.distance;
         $scope.form.userGroup = [];
         Campaign.save($scope.form, function (data) {
-          $state.go('main');
+          $scope.step = 2;
+          $scope.campaign = data;
+          $scope.qr_img = "https://api.qrserver.com/v1/create-qr-code/?size=150*150&data=" + data._id;
         }, function(err) {
           console.log(err);
           if(err) {

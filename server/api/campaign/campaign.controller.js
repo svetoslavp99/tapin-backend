@@ -2,8 +2,13 @@
 
 var _ = require('lodash');
 var Campaign = require('./campaign.model');
-var Opportunity = require('../user/opportunity.model');
+var Business = require('../user/business.model.js');
+var User = require('../user/user.model');
+var UserLocation = require('../user/user-location.model');
 var util = require('util');
+var mileToMi = 1609.34;
+var mileToKm = 1.60934;
+var geolib = require('geolib');
 
 // Get list of campaigns
 exports.index = function (req, res) {
@@ -43,7 +48,7 @@ exports.create = function (req, res) {
 
   var userId = req.user._id;
 
-  Opportunity.findOne({user: userId}, function (err, opportunity) {
+  Business.findOne({user: userId}, function (err, business) {
     if (err) {
       return handleError(res, err);
     }
@@ -51,38 +56,49 @@ exports.create = function (req, res) {
     // create new campaign
     var newCampaign = new Campaign(req.body);
     newCampaign.user = userId;
-    newCampaign.geo = opportunity.geo;
+    newCampaign.geo = business.geo;
     newCampaign.save(function (err, campaign) {
       if (err) {
         return handleError(res, err);
       }
 
-      opportunity.opportunity = _.map(opportunity.opportunity, function (oppt) {
+      business.opportunity = _.map(business.opportunity, function (oppt) {
         oppt.userGroup = [];
+        oppt.userScanned = [];
         return oppt;
       });
-      opportunity.save(function (err) {
+      business.save(function (err) {
         if (err) {
           return handleError(res, err);
         }
 
-        User.find({
+        var maxDistance = campaign.distance * mileToMi;
+        console.log(maxDistance);
+
+        UserLocation.find({
           geo: {
             $near: campaign.geo,
-            $maxDistance: campaign.distance * mileToMi
-          },
-          criteria: {
-            $all: campaign.criteria
-          },
-          role: 'user'
-        }, function(err, users) {
+            $maxDistance: campaign.distance * mileToKm/111.12
+          }
+        }).populate({
+          path: 'user',
+          match: {
+            criteria: {$all: campaign.criteria},
+            role: 'user'
+          }
+        }).exec(function(err, users) {
           if(err) {
+            console.log(err);
             return handleError(res, err);
           }
+          console.log(users);
           _.forEach(users, function(user) {
-            _.forEach(user.socketId, function(socketId) {
-              global.io.sockets.socket(socketId).emit(campaign.message);
-            });
+            console.log(geolib.getDistance(user.geo, campaign.geo));
+            if(user.user) {
+              _.forEach(user.user.socketId, function (socketId) {
+                global.io.sockets.socket(socketId).emit(campaign.message);
+              });
+            }
           });
         });
 
@@ -111,6 +127,35 @@ exports.update = function (req, res) {
         return handleError(res, err);
       }
       return res.json(200, campaign);
+    });
+  });
+};
+
+// update user group after scanning qr code.
+exports.scan = function (req, res) {
+  var userId = req.user._id;
+
+  Campaign.findById(req.params.id).populate('user').exec(function (err, campaign) {
+    if(err) {
+      return handleError(res, err);
+    }
+    if(!campaign) {
+      return res.send(404, {});
+    }
+    if(!_.find(campaign.userScanned, userId)) {
+      campaign.userScanned.push(userId);
+    }
+    campaign.save(function(err) {
+      if(err) {
+        return handleError(res, err);
+      }
+
+      // emit update to socket.
+      _.forEach(campaign.user.socketId, function (socketId) {
+        global.io.sockets.socket(socketId).emit('campaign:update', campaign);
+      });
+
+      return res.send(200, campaign);
     });
   });
 };

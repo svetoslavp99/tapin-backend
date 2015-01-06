@@ -59,7 +59,7 @@ var all = {
     callbackURL:  (process.env.DOMAIN || '') + '/auth/google/callback'
   },
 
-  distances: [0.25, .50, 1]
+  distances: [0.25, 0.50, 1]
 };
 
 // Export the config object based on the NODE_ENV

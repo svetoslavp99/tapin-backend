@@ -32,6 +32,7 @@
     "socket.io": "^0.9.16",
     "socket.io-client": "^0.9.16",
     "socketio-jwt": "^2.0.2",
+    "validator": "^3.26.0",
     "when": "^3.6.4"
   },
   "devDependencies": {

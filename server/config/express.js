@@ -29,7 +29,7 @@ module.exports = function (app) {
   app.set('view engine', 'html');
   app.use(compression());
   app.use(bodyParser.urlencoded({
-    uploadDir: path.join(__dirname, '../uploads/'),
+    uploadDir: config.root + '/public/',
     keepExtensions: true,
     extended: false
   }));

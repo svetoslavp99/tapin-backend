@@ -8,7 +8,7 @@
 var User = require('../api/user/user.model');
 var UserLocation = require('../api/user/user-location.model');
 var Campaign = require('../api/campaign/campaign.model');
-var Opportunity = require('../api/user/opportunity.model');
+var Business = require('../api/user/business.model.js');
 var async = require('async');
 
 async.series([
@@ -26,7 +26,7 @@ async.series([
   },
   // remove opportunity schema
   function (callback) {
-    Opportunity.find({}).remove(function () {
+    Business.find({}).remove(function () {
       return callback();
     });
   },
@@ -62,9 +62,16 @@ async.series([
       if (err) {
         return callback(err);
       }
-      Opportunity.create({
+      Business.create({
         user: user._id,
         geo: [55, 55],
+        businessName: 'business',
+        website: 'http://sample.com/',
+        contact: 'business@business.com',
+        phone: '1234',
+        address: 'sample address',
+        businessType: 'Online',
+        businessCategory: ['Food', 'Drink', 'Health'],
         opportunity: [
           {
             distance: 0.25,

@@ -9,10 +9,12 @@ var async = require('async');
 var distances = config.distances;
 var util = require('util');
 var UserLocation = require('./user-location.model');
-var Opportunity = require('./opportunity.model');
+var Business = require('./business.model.js');
 var Campaign = require('../campaign/campaign.model');
 var geolib = require('geolib');
 var mileToMi = 1609.34;
+var mileToKm = 1.60934;
+var radianToMile = 3959;
 
 var validationError = function (res, err) {
   return res.json(422, err);
@@ -60,9 +62,9 @@ exports.create = function (req, res, next) {
 
       } else if (user.role === 'manager') {
 
-        var newOpportunity = new Opportunity();
-        newOpportunity.set('user', user._id);
-        newOpportunity.set('geo', [req.body.lat, req.body.long]);
+        var newBusiness = new Business(req.body);
+        newBusiness.set('user', user._id);
+        newBusiness.set('geo', [req.body.lat, req.body.long]);
         var oppts = [];
         _.forEach(distances, function (distance) {
           oppts.push({
@@ -70,9 +72,12 @@ exports.create = function (req, res, next) {
             userGroup: []
           });
         });
-        newOpportunity.set('opportunity', oppts);
-        newOpportunity.save(function (err) {
-          if (err) return handleError(res, err);
+        newBusiness.set('opportunity', oppts);
+        newBusiness.save(function (err) {
+          if (err) {
+            console.log(err);
+            return handleError(res, err);
+          }
           var token = jwt.sign({_id: user._id}, config.secrets.session, {expiresInMinutes: 60 * 5});
           res.json({token: token});
         });
@@ -149,8 +154,8 @@ exports.updateLocation = function (req, res, next) {
 
   var userId = req.user._id;
   var coords = [];
-  coords[0] = req.param('lat');
-  coords[1] = req.param('long');
+  coords[0] = parseFloat(req.param('lat'));
+  coords[1] = parseFloat(req.param('long'));
 
   User.findById(userId, function (err, user) {
     if (err) {
@@ -179,110 +184,191 @@ exports.updateLocation = function (req, res, next) {
         }
 
         async.series([
-          // update opportunity
+          // update business
           function (cb) {
-            Opportunity.find({
-              geo: {
-                $near: coords,
-                $maxDistance: _.max(distances) * mileToMi
+            Business.geoNear(coords, {
+                spherical: true,
+                maxDistance: parseFloat(_.max(distances) * mileToMi / 3959)
               }
-            }).populate({
-              path: 'user',
-              match: {criteria: {$all: user.criteria}}
-            }).exec(function (err, oppts) {
-              if (err) {
-                return cb(err);
-              }
-              if (oppts.length === 0) {
-                return cb();
-              }
-              async.each(oppts, function (oppt, callback) {
-                _.forEach(oppt.opportunity, function (item) {
-                  if (geolib.isPointInCircle(coords, oppt.geo, item.distance * mileToMi) && item.userGroup.indexOf(userId) === -1) {
-                    var index = oppt.opportunity.indexOf(item);
-                    oppt.opportunity[index].userGroup.push(userId);
-                  }
-                });
-                oppt.save(function (err, oppt) {
-                  if (err) {
-                    return callback(err);
-                  }
-
-                  var data = [];
-
-                  _.forEach(oppt.opportunity, function (item) {
-                    data.push({
-                      distance: item.distance,
-                      count: item.userGroup.length
-                    });
-                  });
-
-                  // emit update to socket.
-                  _.forEach(oppt.user.socketId, function (socketId) {
-                    global.io.sockets.socket(socketId).emit('opportunity:update', data);
-                  });
-
-                  return callback();
-                });
-              }, function (err) {
+              //Business.find({
+              //  geo: {
+              //    $near: coords,
+              //    $maxDistance: _.max(distances) * mileToKm / 111.12
+              //  }
+              //})
+              //  .populate({
+              //  path: 'user',
+              //  match: {criteria: {$elemMatch: {$in: user.criteria}}}
+              //}).exec(
+              , function (err, oppts) {
                 if (err) {
+                  console.log(err);
                   return cb(err);
                 }
-                return cb();
+                if (oppts.length === 0) {
+                  return cb();
+                }
+                User.populate(oppts, {
+                  path: 'obj.user',
+                  //match: {criteria: {$all: user.criteria}}
+                }, function (err, oppts) {
+                  if (err) {
+                    console.log(err);
+                    return cb(err);
+                  }
+                  async.each(oppts, function (oppt, callback) {
+                    oppt = oppt.obj;
+                    var diff = _.merge(oppt.user.criteria, user.criteria);
+                    if (oppt.user && diff.length === user.criteria.length) {
+                      _.forEach(oppt.opportunity, function (item) {
+                        console.log(geolib.isPointInCircle(coords, oppt.geo, item.distance * mileToMi));
+                        console.log(geolib.getDistance(coords, oppt.geo));
+                        if (geolib.isPointInCircle(coords, oppt.geo, item.distance * mileToMi) && item.userGroup.indexOf(userId) === -1) {
+                          var index = oppt.opportunity.indexOf(item);
+                          oppt.opportunity[index].userGroup.push(userId);
+                        }
+                      });
+                      oppt.save(function (err, oppt) {
+                        if (err) {
+                          return callback(err);
+                        }
+
+                        var data = [];
+
+                        _.forEach(oppt.opportunity, function (item) {
+                          data.push({
+                            distance: item.distance,
+                            count: item.userGroup.length
+                          });
+                        });
+
+                        // emit update to socket.
+                        if (oppt.user.socketId) {
+                          _.forEach(oppt.user.socketId, function (socketId) {
+                            global.io.sockets.socket(socketId).emit('opportunity:update', data);
+                          });
+                        }
+
+                        return callback();
+                      });
+                    } else {
+                      return callback();
+                    }
+                  }, function (err) {
+                    if (err) {
+                      return cb(err);
+                    }
+                    return cb();
+                  });
+                });
               });
-            });
           },
           // update campaign
           function (cb) {
-            Campaign.find({
-              geo: {
-                $near: coords,
-                $maxDistance: _.max(distances) * mileToMi
-              },
-              userGroup: {
-                $ne: userId
-              },
-              criteria: {
-                $all: user.criteria
+            Campaign.geoNear(coords, {
+              spherical: true,
+              maxDistance: parseFloat(_.max(distances) * mileToMi / 3959),
+              query: {
+                userGroup: {
+                  $ne: userId
+                }
               }
-            }).populate('user').exec(function (err, campaigns) {
+            }, function (err, campaigns) {
               if (err) {
                 return cb(err);
               }
-              async.forEach(campaigns, function (campaign, callback) {
-                if (geolib.isPointInCircle(coords, campaign.geo, campaign.distance * mileToMi)) {
-                  campaign.userGroup.push(userId);
-                  campaign.save(function (err, campaign) {
-                    if (err) {
-                      return callback(err);
-                    }
-
-                    // emit update to socket.
-                    _.forEach(campaign.user.socketId, function (socketId) {
-                      global.io.sockets.socket(socketId).emit('campaign:update', campaign);
-                    });
-                    _.forEach(user.socketId, function(socketId) {
-                      global.io.sockets.socket(socketId).emit(campaign.message);
-                    });
-
-                    return callback();
-                  });
-                }
-              }, function (err) {
+              User.populate(campaigns, {
+                path: 'obj.user',
+                //match: {criteria: {$all: user.criteria}}
+              }, function (err, campaigns) {
                 if (err) {
+                  console.log(err);
                   return cb(err);
                 }
-                return cb();
+                async.forEach(campaigns, function (campaign, callback) {
+                  campaign = campaign.obj;
+                  var diff = _.merge(campaign.criteria, user.criteria);
+                  if (geolib.isPointInCircle(coords, campaign.geo, campaign.distance * mileToMi) && diff.length === user.criteria.length && campaign.user) {
+                    campaign.userGroup.push(userId);
+                    campaign.save(function (err, campaign) {
+                      if (err) {
+                        return callback(err);
+                      }
+
+                      // emit update to socket.
+                      _.forEach(campaign.user.socketId, function (socketId) {
+                        global.io.sockets.socket(socketId).emit('campaign:update', campaign);
+                      });
+                      _.forEach(user.socketId, function (socketId) {
+                        console.log(' [x] sending push notification to end user : found new campaign [%s]', campaign.message);
+                        global.io.sockets.socket(socketId).emit(campaign.message);
+                      });
+
+                      return callback();
+                    });
+                  } else {
+                    return callback();
+                  }
+                }, function (err) {
+                  if (err) {
+                    return cb(err);
+                  }
+                  return cb();
+                });
               });
             });
+            //Campaign.find({
+            //  geo: {
+            //    $near: coords,
+            //    $maxDistance: _.max(distances) * mileToKm / 111.12
+            //  },
+            //  userGroup: {
+            //    $ne: userId
+            //  },
+            //  criteria: {
+            //    $all: user.criteria
+            //  }
+            //}).populate('user').exec(function (err, campaigns) {
+            //  if (err) {
+            //    return cb(err);
+            //  }
+            //  async.forEach(campaigns, function (campaign, callback) {
+            //    if (geolib.isPointInCircle(coords, campaign.geo, campaign.distance * mileToMi) && campaign.user) {
+            //      campaign.userGroup.push(userId);
+            //      campaign.save(function (err, campaign) {
+            //        if (err) {
+            //          return callback(err);
+            //        }
+            //
+            //        // emit update to socket.
+            //        _.forEach(campaign.user.socketId, function (socketId) {
+            //          global.io.sockets.socket(socketId).emit('campaign:update', campaign);
+            //        });
+            //        _.forEach(user.socketId, function (socketId) {
+            //          console.log(' [x] sending push notification to end user : found new campaign [%s]', campaign.message);
+            //          global.io.sockets.socket(socketId).emit(campaign.message);
+            //        });
+            //
+            //        return callback();
+            //      });
+            //    } else {
+            //      return callback();
+            //    }
+            //  }, function (err) {
+            //    if (err) {
+            //      return cb(err);
+            //    }
+            //    return cb();
+            //  });
+            //});
           }
         ], function (err) {
           if (err) {
             return handleError(res, err);
           }
-          return res.send(200);
+          return res.send(200, {});
         });
-        return res.send(200);
+        return res.send(200, {});
       });
     });
   });
@@ -318,31 +404,35 @@ exports.updateLocation = function (req, res, next) {
  * @param next
  */
 exports.updateCriteria = function (req, res, next) {
+  console.log(req.param('criteria'));
   // parameter validation
-  req.checkBody('criteria', 'Invalid criteria').notEmpty().isArray();
+  req.checkBody('criteria', 'Invalid criteria').notEmpty();
 
   var errors = req.validationErrors();
   if (errors) {
     return res.send('There have been validation errors: ' + util.inspect(errors), 400);
   }
 
+
   // function variables
   var userId = req.user._id;
-  var criteria = req.param('criteria');
+  var criteria = JSON.parse(req.param('criteria'));
+
+  console.log(criteria);
 
   User.findById(userId, function (err, user) {
     if (err) {
       return handleError(res, err);
     }
     if (!user) {
-      return res.send(404);
+      return res.send(404, {});
     }
     user.criteria = criteria;
     user.save(function (err) {
       if (err) {
         return handleError(res, err);
       }
-      return res.send(200);
+      return res.send(200, {});
     });
   });
 };
@@ -354,10 +444,22 @@ exports.me = function (req, res, next) {
   var userId = req.user._id;
   User.findOne({
     _id: userId
-  }, '-salt -hashedPassword', function (err, user) { // don't ever give out the password or salt
+  }, '-salt -hashedPassword -isOnline -socketId', function (err, user) { // don't ever give out the password or salt
     if (err) return next(err);
     if (!user) return res.json(401);
-    res.json(user);
+    Campaign.find({
+      userScanned: userId
+    }, function(err, campaigns) {
+      if (err) return next(err);
+      user.set('campaigns', campaigns, {strict: false});
+      if(user.avatar) {
+        user.set('avatar', true, {strict: false});
+      } else {
+        user.set('avatar', false, {strict: false});
+      }
+      console.log(' [x] returning user data : ', user);
+      res.json(user);
+    });
   });
 };
 
@@ -371,7 +473,7 @@ exports.me = function (req, res, next) {
 exports.getOpportunities = function (req, res, next) {
   var userId = req.user._id;
 
-  Opportunity.findOne({user: userId}, function (err, oppt) {
+  Business.findOne({user: userId}, function (err, oppt) {
     if (err) {
       return handleError(res, err);
     }
@@ -418,6 +520,20 @@ exports.getOpportunities = function (req, res, next) {
   //});
 };
 
+exports.getAvatar = function(req, res, next) {
+  var userId = req.params.id || req.user._id;
+
+  User.findById(userId, 'avatar', function(err, user) {
+    if(err) {
+      return next(err);
+    }
+    if(!user || !user.avatar) {
+      return res.send(404);
+    }
+    res.sendfile(user.avatar.path);
+  });
+};
+
 /**
  * Get criteria
  *
@@ -454,13 +570,91 @@ exports.getCampaign = function (req, res, next) {
     user: userId,
     active: true
   }, function (err, campaign) {
-    if(err) {
+    if (err) {
       return handleError(res, err);
     }
-    if(!campaign) {
+    if (!campaign) {
       return res.json([]);
     }
     return res.json([campaign]);
+  });
+};
+
+/**
+ * Get business near by user geo location
+ *
+ * @param req
+ * @param res
+ * @param next
+ */
+exports.getBusiness = function (req, res, next) {
+  // parameter validation
+  req.checkQuery('category', 'Invalid category').notEmpty();
+  req.checkQuery('lat', 'Invalid latitude').notEmpty().isFloat();
+  req.checkQuery('long', 'Invalid longitude').notEmpty().isFloat();
+  req.checkQuery('distance', 'Invalid distance').notEmpty().isFloat();
+
+  var errors = req.validationErrors();
+  if (errors) {
+    return res.send('There have been validation errors: ' + util.inspect(errors), 400);
+  }
+
+  // function variables
+  var category = req.param('category');
+  var coords = [];
+  coords[0] = parseFloat(req.param('lat'));
+  coords[1] = parseFloat(req.param('long'));
+  var distance = req.param('distance');
+
+  console.log(geolib.getDistance(coords, {latitude: 55, longitude: 55}));
+
+  //Business.geoNear(coords, {spherical: true, maxDistance: parseFloat(distance / 3959)}, function (err, results) {
+  //  if (err) {
+  //    console.log(err);
+  //    return handleError(res, err);
+  //  } else if (results.length > 0) {
+  //    console.log(results);
+  //    console.log(results[0].dis * 6371);
+  //  }
+  //});
+
+  //Business.find({
+  //  geo: {
+  //    $near: coords,
+  //    $maxDistance: parseFloat( distance / 3959 ),
+  //    $spherical: true
+  //  }
+  //})
+  Business.geoNear(coords, {
+    spherical: true,
+    maxDistance: parseFloat(distance / 3959),
+    query: {
+      businessCategory: category
+    }
+  }, function (err, businesses) {
+    if (err) {
+      return handleError(res, err);
+    }
+    if (!businesses) {
+      return res.json([]);
+    }
+    async.map(businesses, function (business, callback) {
+      Campaign.findOne({user: business.obj.user, active: true}).lean().exec(function (err, campaign) {
+        if (err) {
+          return callback(err);
+        }
+        business.campaign = campaign || null;
+        //business.distance = business.dis * 3959;
+        business.distance = geolib.getDistance(coords, business.obj.geo);
+        callback(null, business);
+      })
+    }, function (err, result) {
+      if (err) {
+        return handleError(res, err);
+      }
+      console.log(result);
+      return res.json(result);
+    });
   });
 };
 

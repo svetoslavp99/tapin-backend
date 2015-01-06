@@ -16,6 +16,7 @@ var CampaignSchema = new Schema({
   createdAt: {type: Date, default: Date.now()},
   available: {type: Number},
   userGroup: [{type: Schema.ObjectId, ref: 'User'}],
+  userScanned: [{type: Schema.ObjectId, ref: 'User'}],
   geo: {
     type: [Number],
     index: '2d'
@@ -38,7 +39,7 @@ CampaignSchema
         throw err;
       }
       if (count >= 1) {
-        next(new Error('Current campaign has not finished yet !'));
+        next(new Error('Invalid campaign create'));
       } else {
         next();
       }

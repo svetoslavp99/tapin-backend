@@ -2,22 +2,20 @@
 
 angular.module('tapinApp')
   .controller('SignupCtrl', function ($scope, Auth, $location, $window) {
-    $scope.user = {};
+    $scope.user = {
+      businessCategory: [],
+      role: 'manager',
+      criteria: [{text: 'green juice'}, {text: 'beachlife'}, {text: 'health'}, {text: 'vegan'}]
+    };
     $scope.errors = {};
+    $scope.businessCategories = ['Food', 'Drink', 'Health', 'Lifestyle', 'Shopping', 'Entertainment'];
+    $scope.businessTypes = ['Store-front', 'Online'];
 
     $scope.register = function(form) {
       $scope.submitted = true;
 
       if(form.$valid) {
-        Auth.createUser({
-          username: $scope.user.username,
-          name: $scope.user.name,
-          email: $scope.user.email,
-          password: $scope.user.password,
-          lat: $scope.user.lat,
-          long: $scope.user.long,
-          role: 'manager'
-        })
+        Auth.createUser($scope.user)
         .then( function() {
           // Account created, redirect to home
           $location.path('/');
@@ -38,4 +36,12 @@ angular.module('tapinApp')
     $scope.loginOauth = function(provider) {
       $window.location.href = '/auth/' + provider;
     };
+
+    $scope.updateBusinessCategory = function(businessCategory, value) {
+      if(value) {
+        $scope.user.businessCategory.push(businessCategory);
+      } else {
+        $scope.user.businessCategory.splice($scope.user.businessCategory.indexOf(businessCategory), 1);
+      }
+    }
   });

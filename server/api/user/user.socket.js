@@ -6,7 +6,7 @@
 
 var User = require('./user.model');
 var UserLocation = require('./user-location.model');
-var Opportunity = require('./opportunity.model');
+var Business = require('./business.model.js');
 var Campaign = require('../campaign/campaign.model');
 var async = require('async');
 var _ = require('lodash');
