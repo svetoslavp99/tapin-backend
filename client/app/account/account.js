@@ -17,6 +17,11 @@ angular.module('tapinApp')
         url: '/settings',
         templateUrl: 'app/account/settings/settings.html',
         controller: 'SettingsCtrl',
-        authenticate: true
+        authenticate: true,
+        resolve: {
+          user: function(User) {
+            return User.get().$promise;
+          }
+        }
       });
   });

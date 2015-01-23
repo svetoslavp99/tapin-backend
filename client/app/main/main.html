@@ -8,54 +8,54 @@
 <div class="container">
   <div class="row spacer text-center">
 
+    <!--<div class="col-md-6">-->
+      <!--<div class="jumbotron" style="height:300px">-->
+        <!--<h2>Visitors</h2>-->
+
+        <!--<div class="row">-->
+
+          <!--<div class="col-md-6">-->
+            <!--<h3>Today</h3>-->
+
+            <!--<div class="row">-->
+              <!--<div class="col-md-6">-->
+                <!--<h4>New</h4>-->
+
+                <!--<p class="lead">N/A</p>-->
+              <!--</div>-->
+              <!--<div class="col-md-6">-->
+                <!--<h4>Repeat</h4>-->
+
+                <!--<p class="lead">N/A</p>-->
+              <!--</div>-->
+            <!--</div>-->
+          <!--</div>-->
+
+
+          <!--<div class="col-md-6">-->
+            <!--<h3>Week</h3>-->
+
+            <!--<div class="row">-->
+              <!--<div class="col-md-6">-->
+                <!--<h4>New</h4>-->
+
+                <!--<p class="lead">N/A</p>-->
+              <!--</div>-->
+              <!--<div class="col-md-6">-->
+                <!--<h4>Repeat</h4>-->
+
+                <!--<p class="lead">N/A</p>-->
+              <!--</div>-->
+            <!--</div>-->
+          <!--</div>-->
+
+        <!--</div>-->
+
+      <!--</div>-->
+    <!--</div>-->
+
     <div class="col-md-6">
-      <div class="jumbotron" style="height:300px">
-        <h2>Visitors</h2>
-
-        <div class="row">
-
-          <div class="col-md-6">
-            <h3>Today</h3>
-
-            <div class="row">
-              <div class="col-md-6">
-                <h4>New</h4>
-
-                <p class="lead">N/A</p>
-              </div>
-              <div class="col-md-6">
-                <h4>Repeat</h4>
-
-                <p class="lead">N/A</p>
-              </div>
-            </div>
-          </div>
-
-
-          <div class="col-md-6">
-            <h3>Week</h3>
-
-            <div class="row">
-              <div class="col-md-6">
-                <h4>New</h4>
-
-                <p class="lead">N/A</p>
-              </div>
-              <div class="col-md-6">
-                <h4>Repeat</h4>
-
-                <p class="lead">N/A</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-
-    <div class="col-md-6">
-      <div class="jumbotron" style="height:300px">
+      <div class="jumbotron" style="height:330px">
         <h2>Opportunities</h2>
         <h4>
           <small>({{showCriteria(criteria)}})</small>
@@ -82,16 +82,12 @@
       </div>
     </div>
 
-  </div>
-
-  <div class="row spacer text-center">
-
     <div class="col-md-6" ng-hide="isCampaignStarted()">
-      <div class="alert alert-warning" role="alert">No Campaigns yet</div>
+      <div class="alert alert-warning" role="alert" style="height:330px">No Campaigns yet</div>
     </div>
 
     <div class="col-md-6" ng-show="isCampaignStarted()">
-      <div class="jumbotron">
+      <div class="jumbotron" style="height:330px">
         <h2>Campaigns</h2>
         <h4>
           <small>({{showCriteria(campaign.criteria)}})</small>
@@ -125,6 +121,10 @@
 
       </div>
     </div>
+
+  </div>
+
+  <div class="row spacer text-center">
 
   </div>
 </div>

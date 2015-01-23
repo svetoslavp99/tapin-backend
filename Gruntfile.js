@@ -188,7 +188,8 @@ module.exports = function (grunt) {
     'node-inspector': {
       custom: {
         options: {
-          'web-host': 'localhost'
+          'web-host': 'localhost',
+          'debug-port': 5850
         }
       }
     },

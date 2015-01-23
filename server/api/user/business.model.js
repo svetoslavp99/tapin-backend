@@ -15,7 +15,7 @@ var BusinessSchema = new Schema({
   phone: String,
   address: String,
   businessType: {type: String, lowercase: true},
-  businessCategory: [{type: String, lowercase: true, set: toLower }],
+  businessCategory: [String],
   geo: {
     type: [Number],
     index: '2d'

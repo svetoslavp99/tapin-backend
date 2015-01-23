@@ -64,7 +64,6 @@ exports.create = function (req, res) {
 
       business.opportunity = _.map(business.opportunity, function (oppt) {
         oppt.userGroup = [];
-        oppt.userScanned = [];
         return oppt;
       });
       business.save(function (err) {
@@ -78,7 +77,7 @@ exports.create = function (req, res) {
         UserLocation.find({
           geo: {
             $near: campaign.geo,
-            $maxDistance: campaign.distance * mileToKm/111.12
+            $maxDistance: campaign.distance * mileToKm / 111.12
           }
         }).populate({
           path: 'user',
@@ -86,15 +85,15 @@ exports.create = function (req, res) {
             criteria: {$all: campaign.criteria},
             role: 'user'
           }
-        }).exec(function(err, users) {
-          if(err) {
+        }).exec(function (err, users) {
+          if (err) {
             console.log(err);
             return handleError(res, err);
           }
           console.log(users);
-          _.forEach(users, function(user) {
+          _.forEach(users, function (user) {
             console.log(geolib.getDistance(user.geo, campaign.geo));
-            if(user.user) {
+            if (user.user) {
               _.forEach(user.user.socketId, function (socketId) {
                 global.io.sockets.socket(socketId).emit(campaign.message);
               });
@@ -135,18 +134,28 @@ exports.update = function (req, res) {
 exports.scan = function (req, res) {
   var userId = req.user._id;
 
-  Campaign.findById(req.params.id).populate('user').exec(function (err, campaign) {
-    if(err) {
+  Campaign.findOne({
+    '_id': req.params.id,
+    'userScanned.user': {$ne: userId}
+  }).populate('user').exec(function (err, campaign) {
+    if (err) {
       return handleError(res, err);
     }
-    if(!campaign) {
+    if (!campaign) {
       return res.send(404, {});
     }
-    if(!_.find(campaign.userScanned, userId)) {
-      campaign.userScanned.push(userId);
-    }
-    campaign.save(function(err) {
-      if(err) {
+    //if(!_.find(campaign.userScanned, userId)) {
+    //  campaign.userScanned.push(userId);
+    //}
+
+    campaign.userScanned.push({
+      user: userId,
+      scannedAt: Date.now()
+    });
+    campaign.userScannedCount = campaign.userScannedCount + 1;
+
+    campaign.save(function (err) {
+      if (err) {
         return handleError(res, err);
       }
 
@@ -158,6 +167,56 @@ exports.scan = function (req, res) {
       return res.send(200, campaign);
     });
   });
+};
+
+// Increase reached in campaign.
+exports.reach = function (req, res) {
+  var userId = req.user._id;
+
+  User.findById(userId, function(err, user) {
+    if(err) {
+      return handleError(res, err);
+    }
+
+    if(!user) {
+      return res.send(404);
+    }
+
+    Campaign.findOne({
+      '_id': req.params.id,
+      'userGroup': {$ne: userId}
+    }).populate('user').exec(function (err, campaign) {
+      if (err) {
+        return handleError(res, err);
+      }
+      if (!campaign) {
+        return res.send(404, {});
+      }
+      //if(!_.find(campaign.userScanned, userId)) {
+      //  campaign.userScanned.push(userId);
+      //}
+
+      campaign.userGroup.push(userId);
+
+      campaign.save(function (err) {
+        if (err) {
+          return handleError(res, err);
+        }
+
+        // emit update to socket.
+        _.forEach(campaign.user.socketId, function (socketId) {
+          global.io.sockets.socket(socketId).emit('campaign:update', campaign);
+        });
+        _.forEach(user.socketId, function (socketId) {
+          console.log(' [x] sending push notification to end user : found new campaign [%s]', campaign.message);
+          global.io.sockets.socket(socketId).emit(campaign.message);
+        });
+
+        return res.send(200, {});
+      });
+    });
+  });
+
 };
 
 // Deletes a campaign from the DB.

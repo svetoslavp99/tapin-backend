@@ -18,6 +18,7 @@ angular.module('tapinApp')
     $scope.save = function() {
       $scope.error = '';
       if($scope.canSubmit()) {
+        console.log($scope.form.opportunity);
         $scope.form.available = $scope.form.opportunity.count;
         $scope.form.distance= $scope.form.opportunity.distance;
         $scope.form.userGroup = [];

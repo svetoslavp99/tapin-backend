@@ -16,7 +16,11 @@ var CampaignSchema = new Schema({
   createdAt: {type: Date, default: Date.now()},
   available: {type: Number},
   userGroup: [{type: Schema.ObjectId, ref: 'User'}],
-  userScanned: [{type: Schema.ObjectId, ref: 'User'}],
+  userScanned: [{
+    user: {type: Schema.ObjectId, ref: 'User'},
+    scannedAt: {type: Date, default: Date.now}
+  }],
+  userScannedCount: {type: Number, default: 0},
   geo: {
     type: [Number],
     index: '2d'

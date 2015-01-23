@@ -5,7 +5,7 @@ var mongoose = require('mongoose'),
 
 var UserLocationSchema = new Schema({
   user: {type: Schema.ObjectId, ref: 'User'},
-  loc: {
+  geo: {
     type: [Number],
     index: '2d'
   },

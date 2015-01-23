@@ -3,10 +3,147 @@
 <div class="container">
   <div class="row">
     <div class="col-sm-12">
-      <h1>Change Password</h1>
+      <h1>User Information</h1>
     </div>
     <div class="col-sm-12">
-      <form class="form" name="form" ng-submit="changePassword(form)" novalidate>
+      <form class="form" name="form" ng-submit="update(form)" novalidate>
+
+        <div class="form-group" ng-class="{ 'has-success': form.businessName.$valid && submitted,
+                                            'has-error': form.businessName.$invalid && submitted }">
+          <label>Business Name</label>
+
+          <input type="text" name="businessName" class="form-control" ng-model="user.businessName"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.businessName.$error.required && submitted">
+            A business name is required
+          </p>
+          <p class="help-block" ng-show="form.businessName.$error.mongoose">
+            {{ errors.businessName }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.website.$valid && submitted,
+                                            'has-error': form.website.$invalid && submitted }">
+          <label>Website</label>
+
+          <input type="text" name="website" class="form-control" ng-model="user.website"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.website.$error.required && submitted">
+            A website is required
+          </p>
+          <p class="help-block" ng-show="form.website.$error.mongoose">
+            {{ errors.website }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.contact.$valid && submitted,
+                                            'has-error': form.contact.$invalid && submitted }">
+          <label>Contact</label>
+
+          <input type="text" name="contact" class="form-control" ng-model="user.contact"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.webscontactite.$error.required && submitted">
+            A contact is required
+          </p>
+          <p class="help-block" ng-show="form.contact.$error.mongoose">
+            {{ errors.contact }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.phone.$valid && submitted,
+                                            'has-error': form.phone.$invalid && submitted }">
+          <label>Phone</label>
+
+          <input type="text" name="phone" class="form-control" ng-model="user.phone"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.phone.$error.required && submitted">
+            A phone is required
+          </p>
+          <p class="help-block" ng-show="form.phone.$error.mongoose">
+            {{ errors.phone }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.address.$valid && submitted,
+                                            'has-error': form.address.$invalid && submitted }">
+          <label>Address</label>
+
+          <input type="text" name="address" class="form-control" ng-model="user.address"
+                 required
+                 mongoose-error/>
+          <p class="help-block" ng-show="form.address.$error.required && submitted">
+            A address is required
+          </p>
+          <p class="help-block" ng-show="form.address.$error.mongoose">
+            {{ errors.address }}
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.lat.$valid && submitted,
+                                            'has-error': form.lat.$invalid && submitted }">
+          <label>Latitude</label>
+
+          <input type="text" name="lat" class="form-control" ng-model="user.lat"
+                 required/>
+          <p class="help-block" ng-show="form.lat.$error.required && submitted">
+            A latitude is required
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.long.$valid && submitted,
+                                            'has-error': form.long.$invalid && submitted }">
+          <label>Longitude</label>
+
+          <input type="text" name="long" class="form-control" ng-model="user.long"
+                 required/>
+          <p class="help-block" ng-show="form.long.$error.required && submitted">
+            A longitude is required
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.businessType.$valid && submitted,
+                                            'has-error': form.businessType.$invalid && submitted }">
+          <label>Tell us about your business</label>
+
+          <select data-ng-model="user.businessType"
+                  data-ng-options="businessType for businessType in businessTypes"
+                  class="form-control"
+                  required>
+            <option value="" disabled>Select</option>
+          </select>
+          <p class="help-block" ng-show="form.businessType.$error.required && submitted">
+            A business type is required
+          </p>
+        </div>
+
+        <div class="form-group" ng-class="{ 'has-success': form.businessCategory.$valid && submitted,
+                                            'has-error': form.businessCategory.$invalid && submitted }">
+          <label>Classify your business (select 3 max that apply)</label>
+
+          <div class="checkbox" ng-repeat="businessCategory in businessCategories">
+            <label>
+              <input type="checkbox" ng-model="checkbox[businessCategory]" ng-true-value="true" ng-false-value="false" ng-checked="checkbox[businessCategory]" ng-change="updateBusinessCategory(businessCategory, checkbox[businessCategory])"> {{businessCategory}}
+            </label>
+          </div>
+          <p class="help-block" ng-show="form.businessCategory.$error.required && submitted">
+            A business category is required
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="criteria">Opportunity Criteria <span class="text-danger">*</span></label>
+          <tags-input class="bootstrap"
+                      data-ng-model="user.criteria"
+                      placeholder="Add a criteria"
+                      add-on-blur="false"
+                      allow-leftover-text="false"
+                      replace-spaces-with-dashes="false">
+          </tags-input>
+        </div>
 
         <div class="form-group">
           <label>Current Password</label>
@@ -22,8 +159,7 @@
           <label>New Password</label>
 
           <input type="password" name="newPassword" class="form-control" ng-model="user.newPassword"
-                 ng-minlength="3"
-                 required/>
+                 ng-minlength="3"/>
           <p class="help-block"
              ng-show="(form.newPassword.$error.minlength || form.newPassword.$error.required) && (form.newPassword.$dirty || submitted)">
             Password must be at least 3 characters.

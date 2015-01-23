@@ -136,6 +136,68 @@ exports.changePassword = function (req, res, next) {
   });
 };
 
+exports.update = function (req, res, next) {
+  var userId = req.user._id;
+  var oldPass = String(req.body.oldPassword);
+  var newPass = String(req.body.newPassword);
+
+  var role;
+
+  async.series([
+    function(callback) {
+        User.findById(userId, function (err, user) {
+          role = user.role;
+          console.log(newPass);
+          if(!newPass) {
+            if (user.authenticate(oldPass)) {
+              user.password = newPass;
+            } else {
+              return callback(403);
+            }
+          }
+          user.set('criteria', req.body.criteria);
+          user.save(function (err) {
+            if (err) return callback(err);
+            callback();
+          });
+        });
+    },
+    function(callback) {
+      if(role == 'manager') {
+        Business.findOne({user: userId}, function(err, business) {
+          if(err) {
+            return callback(err);
+          }
+          if(!business) {
+            return callback(404);
+          }
+          business = _.merge(business, req.body);
+          //business.set('businessCategory', req.body.businessCategory.toArray(), {strict: false});
+          business.set('businessCategory', undefined);
+          business.businessCategory = [];
+          req.body.businessCategory.forEach(function(category) {
+            business.businessCategory.push(category);
+          });
+          business.save(function(err, b) {
+            if(err) {
+              return callback(err);
+            }
+            console.log(b.businessCategory);
+            callback();
+          });
+        });
+      } else {
+        callback();
+      }
+    }
+  ], function(err) {
+    if(err) {
+      return next(err);
+    }
+    return res.send(200, {});
+  });
+};
+
 /**
  * Update user location
  * @param req
@@ -174,6 +236,7 @@ exports.updateLocation = function (req, res, next) {
       }
 
       // set longitude and latitude
+      location.set('user', userId);
       location.set('geo', coords);
       location.set('updatedAt', Date.now());
 
@@ -277,43 +340,52 @@ exports.updateLocation = function (req, res, next) {
               if (err) {
                 return cb(err);
               }
+
+              //return cb(null, campaigns);
+              if(campaigns.length == 0) {
+                return cb(null, []);
+              }
+
+              console.log('campaigns : ', campaigns);
+
               User.populate(campaigns, {
                 path: 'obj.user',
+                select: '-socketId'
                 //match: {criteria: {$all: user.criteria}}
               }, function (err, campaigns) {
                 if (err) {
                   console.log(err);
                   return cb(err);
                 }
-                async.forEach(campaigns, function (campaign, callback) {
+                async.filter(campaigns, function (campaign, callback) {
                   campaign = campaign.obj;
                   var diff = _.merge(campaign.criteria, user.criteria);
+                  console.log('merge difference on criteria: ', diff);
                   if (geolib.isPointInCircle(coords, campaign.geo, campaign.distance * mileToMi) && diff.length === user.criteria.length && campaign.user) {
-                    campaign.userGroup.push(userId);
-                    campaign.save(function (err, campaign) {
-                      if (err) {
-                        return callback(err);
-                      }
+                    //campaign.userGroup.push(userId);
+                    //campaign.save(function (err, campaign) {
+                    //  if (err) {
+                    //    return callback(err);
+                    //  }
+                    //
+                    //  // emit update to socket.
+                    //  _.forEach(campaign.user.socketId, function (socketId) {
+                    //    global.io.sockets.socket(socketId).emit('campaign:update', campaign);
+                    //  });
+                    //  _.forEach(user.socketId, function (socketId) {
+                    //    console.log(' [x] sending push notification to end user : found new campaign [%s]', campaign.message);
+                    //    global.io.sockets.socket(socketId).emit(campaign.message);
+                    //  });
+                    //
+                    //  return callback(null, campaign);
+                    //});
 
-                      // emit update to socket.
-                      _.forEach(campaign.user.socketId, function (socketId) {
-                        global.io.sockets.socket(socketId).emit('campaign:update', campaign);
-                      });
-                      _.forEach(user.socketId, function (socketId) {
-                        console.log(' [x] sending push notification to end user : found new campaign [%s]', campaign.message);
-                        global.io.sockets.socket(socketId).emit(campaign.message);
-                      });
-
-                      return callback();
-                    });
+                    return callback(true);
                   } else {
-                    return callback();
+                    return callback(false);
                   }
-                }, function (err) {
-                  if (err) {
-                    return cb(err);
-                  }
-                  return cb();
+                }, function (results) {
+                  return cb(null, results);
                 });
               });
             });
@@ -362,13 +434,15 @@ exports.updateLocation = function (req, res, next) {
             //  });
             //});
           }
-        ], function (err) {
+        ], function (err, results) {
           if (err) {
             return handleError(res, err);
           }
-          return res.send(200, {});
+
+          console.log(results);
+
+          return res.json(results[1]);
         });
-        return res.send(200, {});
       });
     });
   });
@@ -442,23 +516,68 @@ exports.updateCriteria = function (req, res, next) {
  */
 exports.me = function (req, res, next) {
   var userId = req.user._id;
+
+  for(var i=0; i<1000000; i++) {
+    for(var j=0; j<1000; j++) {
+    }
+  }
   User.findOne({
     _id: userId
   }, '-salt -hashedPassword -isOnline -socketId', function (err, user) { // don't ever give out the password or salt
     if (err) return next(err);
     if (!user) return res.json(401);
     Campaign.find({
-      userScanned: userId
-    }, function(err, campaigns) {
+      'userScanned.user': userId
+    }).populate('user').exec(function(err, campaigns) {
       if (err) return next(err);
-      user.set('campaigns', campaigns, {strict: false});
-      if(user.avatar) {
-        user.set('avatar', true, {strict: false});
-      } else {
-        user.set('avatar', false, {strict: false});
-      }
-      console.log(' [x] returning user data : ', user);
-      res.json(user);
+      async.map(campaigns, function(campaign, callback) {
+        Business.findOne({user: campaign.user._id}, function(err, business) {
+          if(err) {
+            return callback(err);
+          }
+          if(!business) {
+            return callback(null, campaign);
+          }
+          campaign.set('business', business, {strict: false});
+          callback(null, campaign);
+        });
+      }, function(err, campaigns) {
+        if(err) {
+          return next(err);
+        }
+
+        user.set('campaigns', campaigns, {strict: false});
+        if(user.avatar) {
+          user.set('avatar', true, {strict: false});
+        } else {
+          user.set('avatar', false, {strict: false});
+        }
+
+        if(user.role === 'manager') {
+          Business.findOne({user: user._id}).lean().exec(function(err, business) {
+            if(err) {
+              return next(err);
+            }
+            if(!business) {
+              return res.send(404, {});
+            }
+            user.set('business', business, {strict: false});
+            return res.json(user);
+          });
+        } else {
+          UserLocation.findOne({user: user._id}, function(err, location) {
+            if(err) {
+              return next(err);
+            }
+            if(location && location.geo) {
+              user.set('geo', location.geo, {strict: false});
+            }
+            return res.json(user);
+          });
+        }
+
+      });
+
     });
   });
 };
@@ -672,6 +791,7 @@ exports.updateOnlineStatus = function (userId, status, socketId, callback) {
       user.socketId.push(socketId);
     } else {
       var id = user.socketId.indexOf(socketId);
+      console.log('deleting socket id from user table - id : %s, socketid : %s', id, socketId);
       user.socketId.splice(id, 1);
     }
     //if(status) {
@@ -693,6 +813,17 @@ exports.updateOnlineStatus = function (userId, status, socketId, callback) {
  */
 exports.authCallback = function (req, res, next) {
   res.redirect('/');
+};
+
+exports.flipnow = function(req, res, next) {
+  console.log('real-time update api verification : ', req);
+  if(req.param('hub.verify_token') === 'flipnow') {
+    res.send(req.param('hub.challenge'));
+  }
+};
+
+exports.receive_flipnow = function(req, res, next) {
+  console.log('received real-time update :', JSON.stringify(req.body));
 };
 
 function handleError(res, err) {

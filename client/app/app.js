@@ -31,7 +31,7 @@ angular.module('tapinApp', [
 
       // Intercept 401s and redirect you to login
       responseError: function(response) {
-        if(response.status === 401) {
+        if(response.status === 401 || response.status===404) {
           $location.path('/login');
           // remove any stale tokens
           $cookieStore.remove('token');
